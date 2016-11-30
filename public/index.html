@@ -115,6 +115,36 @@
     <div class="common-clear"></div>
     # } #
 </script>
+<script id="template-show-search-result-single" type="text/x-kendo-template">
+    <div class="result-app-info-unit">
+        <div class="result-app-info">
+            # if(info.AppIcon2PngPath){#
+            <div class="app-icon">
+                <img src="#= info.AppIcon2PngPath #">
+            </div>
+            # } #
+            <div class="app-info">
+                <p class="text-wrapper" >
+                    <span class="result-name" title="#= name #">#= info.AppName # </span>
+                    # if (info.AppVersion ){#
+                    <span class="text-help" style="font-size: 0.6em;">&nbsp;(V#= info.AppVersion #)</span>
+                    #}#
+                </p>
+                <p class="text-wrapper text-help" >
+                    <span title="#= path #">#= path #</span>
+                </p>
+
+            </div>
+        </div>
+        <div class="result-app-info-btn">
+            <a href="javascript:void(0);" class="btn-open-folder"
+               data-path="#= path #" data-appName="#= name #"
+               data-bind="click: openResultFolder" title="open the folder">
+                <span class="k-icon k-i-restore"></span></a>
+        </div>
+    </div>
+    <div class="common-clear"></div>
+</script>
 
 <!--基础库加载-->
 <script src="common/underscore/1.8.3/underscore-min.js"></script>

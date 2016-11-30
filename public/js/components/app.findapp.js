@@ -41,7 +41,9 @@
     var templateShowSelectedFolder =
             kendo.template($('#template-show-selected-folder').html()),
         templateShowSearchResult =
-            kendo.template($('#template-show-search-result').html());
+            kendo.template($('#template-show-search-result').html()),
+        templateShowSearchResultSingle =
+            kendo.template($('#template-show-search-result-single').html());
 
     c$.showSelectedFolder = function(path, isUser){
         var container = $('#selected-folder-list');
@@ -59,6 +61,13 @@
     };
 
     c$.showFindResult = function(result){ // result: [{'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'}]
+        // result = [{'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
+        //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
+        //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
+        //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
+        //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
+        //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
+        //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'}];
         var container = $('#search-result-list');
 
         $('.result-data-count').text(result.length);
@@ -71,12 +80,24 @@
             $.each(result, function(index, el){
                 console.log(index + ':' + el.path);
                 // var info = {'AppIcon2PngPath': c$.app_options.default_applicationIcon};
-                var info = b$.App.getOtherAppInfo(el.path, function(info){
+                b$.App.getOtherAppInfo(el.path, function(info){
+                    // info = {
+                    //             AppBuildVersion: "12602.2.14.0.7",
+                    //             AppCategoryType: "public.app-category.productivity",
+                    //             AppIcon2PngPath: c$.app_options.default_applicationIcon,
+                    //             AppIconPath: "/Applications/Safari.app/Contents/Resources/compass.icns",
+                    //             AppIconValue: "compass",
+                    //             AppId: "com.apple.Safari",
+                    //             AppName: "Safari",
+                    //             AppVersion: "10.0.1"
+                    //     };
                     if(info && !info.AppIcon2PngPath){
                         info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
                     }
                     el['info'] = info;
-                    console.log('callback info:' + $.obj2string(info));
+                    // console.log('callback info:' + $.obj2string(info));
+                    container.append(templateShowSearchResultSingle(el));
+                    kendo.bind($('.btn-open-folder'), eventViewModel);
                 });
                 // var info = {
                 //             AppBuildVersion: "12602.2.14.0.7",
@@ -88,20 +109,22 @@
                 //             AppName: "Safari",
                 //             AppVersion: "10.0.1"
                 //     };
+                // el['info'] = info;
+                // console.log('callback info:' + $.obj2string(info));
+                // container.append(templateShowSearchResultSingle(el));
+                // kendo.bind($('.btn-open-folder'), eventViewModel);
                 // console.log(info);
-                if(!info){
-                    info = {AppName:el['name'].substring(0, el['name'].indexOf('.'))
-                    };
-                }
+                // if(!info){
+                //     info = {AppName:el['name'].substring(0, el['name'].indexOf('.'))
+                //     };
+                // }
                 // if(info && !info.AppIcon2PngPath){
                 //     info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
                 // }
-                el['info'] = info;
-                console.log(el);
+                // el['info'] = info;
+                // console.log(el);
             });
         }
-        container.html(templateShowSearchResult(result));
-        kendo.bind($('.btn-open-folder'), eventViewModel);
     };
 
 /// events
@@ -206,6 +229,7 @@
                     $.reportInfo({"SYS_state": contType || "", "SYS_data": info2 || ""});
                 }
                 console.log(contType);
+                c$.showFindResult('');
                 if (contType == 'find_app_success'){
                     var _findApp_result_data = pyMsgObj.data;
                     c$.showFindResult(_findApp_result_data);
@@ -442,6 +466,7 @@
     };
 
     c$.findApp = function(e){
+        $('#search-result-list').html('');
         // 检查当前的Python运行环境，是否具备启动标准
         if(c$.python.isPyWSisRunning){
             c$.python.configDebugLog(false);

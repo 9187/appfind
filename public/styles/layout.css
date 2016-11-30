@@ -15,6 +15,7 @@ body{
   padding-bottom: 1px;
   border-bottom: 1px dashed #888888;
   height: 80px;
+  overflow: hidden;
 }
 
 .app-icon{
@@ -33,6 +34,10 @@ body{
   /*min-width: 200px;*/
   overflow: hidden;
   width: 400px;
+}
+
+.app-info p{
+  margin: 10px auto;
 }
 
 .folder-icon{
