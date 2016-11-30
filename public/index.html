@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title></title>
+
+    <link rel="stylesheet" href="common/kendoui/v2.0.0/styles/kendo.common.core.min.css" />
+    <link rel="stylesheet" href="common/kendoui/v2.0.0/styles/kendo.default.min.css" />
+
+
+    <link rel="stylesheet" href="styles/layout.css"/>
+
+</head>
+<body >
+    <div class="kendo-splitter" >
+        <div class="left">
+            <div class="search-bar common-border">
+                <span class="k-textbox k-space-left common-no-radius" style="" >
+                    <input type="text" id="input-key-word"  data-bind="events:{keyup: findApp}"
+                           placeholder="app keywords" class="common-no-radius"/>
+                    <span class="k-icon k-i-search" data-bind="click:findApp">&nbsp;</span>
+                </span>
+            </div>
+            <div class="search-path-container common-border">
+                <div class="search-folder-title"><span class="find-app-logo"></span>Selected Folders</div>
+                <div class="" style="" id="selected-folder-list">
+                </div>
+            </div>
+            <div class="search-container-footer common-border">
+                <div class="footer-left">
+                    <input id="eq3" class="k-checkbox recursion-sub-folder" type="checkbox">
+                    <label class="k-checkbox-label" for="eq3">Scan Sub Folder</label>
+                </div>
+                <div class="footer-right">
+                    <button type="button" data-bind="click:addFolder"
+                            class="common-btn-2-a" title="Add Find App Path"
+                            id="btn-add-find-path"><span class="k-icon k-i-folder-add"></span></button>
+                </div>
+                <div class="common-clear"></div>
+            </div>
+
+        </div>
+        <div class="right">
+            <div class="result-header common-border">
+                <h3 style="font-size: 20px;">
+                    <span class="find-app-logo"></span>Find Result:
+                    <span class="result-data-count"></span>
+                </h3>
+            </div>
+            <div class="result-container common-border" id="search-result-list">
+            </div>
+        </div>
+    </div>
+
+
+<script id="template-show-selected-folder" type="text/x-kendo-template">
+    <div class="folder-info-unit" >
+        <div class="result-app-info" >
+            <div class="folder-icon">
+                <img src="#= icon #">
+            </div>
+            <div class="folder-info">
+                <p class="text-wrapper" title="#= path #">
+                    #= name #
+                </p>
+                <p class="text-wrapper text-help" title="#= path #">
+                    #= path #
+                </p>
+            </div>
+
+        </div>
+        <div class="result-app-info-btn" >
+            # if (isUser == 1){ #
+            <a href="javascript:void(0);" class="btn-unselect-folder"
+               title="unselect the folder" data-path="#= path #"
+                data-bind="click: removeFolder">
+                <span class="k-icon k-i-cancel"></span>
+            </a>
+            # } #
+        </div>
+    </div>
+</script>
+
+<script id="template-show-search-result" type="text/x-kendo-template">
+    # for (var i = 0; i < data.length; i++){ #
+    <div class="result-app-info-unit">
+        <div class="result-app-info">
+            # if(data[i].info.AppIcon2PngPath){#
+            <div class="app-icon">
+                <img src="#= data[i].info.AppIcon2PngPath #">
+            </div>
+            # } #
+            <div class="app-info">
+                <p class="text-wrapper" >
+                    <span class="result-name" title="#= data[i].name #">#= data[i].info.AppName # </span>
+                    # if (data[i].info.AppVersion ){#
+                    <span class="text-help" style="font-size: 0.6em;">&nbsp;(V#= data[i].info.AppVersion #)</span>
+                    #}#
+                </p>
+                <p class="text-wrapper text-help" >
+                    <span title="#= data[i].path #">#= data[i].path #</span>
+                </p>
+
+            </div>
+        </div>
+        <div class="result-app-info-btn">
+            <a href="javascript:void(0);" class="btn-open-folder"
+               data-path="#= data[i].path #" data-appName="#= data[i].name #"
+                data-bind="click: openResultFolder" title="open the folder">
+                <span class="k-icon k-i-restore"></span></a>
+        </div>
+    </div>
+    <div class="common-clear"></div>
+    # } #
+</script>
+
+<!--基础库加载-->
+<script src="common/underscore/1.8.3/underscore-min.js"></script>
+<script src="common/jquery/jquery.min.js"></script>
+<script src="common/kendoui/v2.0.0/js/kendo.all.min.js"></script>
+
+<!--UI第三方库-->
+
+<!--核心启动加载-->
+<script src="js/util.js"></script>
+<script src="js/bs.js"></script>
+
+<!--插件部分加载-->
+
+<!--扩展加载-->
+<script src="js/extends/tools.python.js"></script>
+<script src="js/extends/business.native.js"></script>
+<script src="js/extends/l10n.js"></script>
+
+<!--App 核心-->
+<script src="js/core/app.observer.js"></script>
+<script src="js/core/app.config.js"></script>
+<script src="js/core/app.util.js"></script>
+
+<!--App 插件-->
+
+<!--App UI组件-->
+<!--<script src="js/components/app.settings_config.js"></script>-->
+<!--<script src="js/components/app.auto_test.js"></script>-->
+<!--<script src="js/components/app.main.js"></script>-->
+
+<!--App 业务-->
+<script src="js/components/app.findapp.js"></script>
+
+<!--App 启动-->
+<script src="js/app.js"></script>
+
+
+</body>
+</html>

@@ -1,0 +1,313 @@
+
+/**
+定义绘制部分的高度和宽度
+**/
+@UIC-height: 360px;
+@UIC-width: 1024px;
+
+
+.windowsBackground {
+	background-image: none,-webkit-linear-gradient(top,rgba(255,255,255,.6) 0,rgba(255,255,255,.0) 100%);
+	background-image: none,-moz-linear-gradient(top,rgba(255,255,255,.6) 0,rgba(255,255,255,.0) 100%);
+	background-image: none,-o-linear-gradient(top,rgba(255,255,255,.6) 0,rgba(255,255,255,.0) 100%);
+	/* background-image: none,linear-gradient(to bottom,rgba(255,255,255,.6) 0,rgba(255,255,255,.0) 100%); */
+	background-position: 50% 50%;
+	background-color: #e3e3e3;
+}
+
+body {
+	max-width: 1024px;
+	max-height: 540px;
+	background-color: #1b1b1b;
+	font-size: 12px;
+	font-family: "Helvetica Neue", Helvetica, Menlo, Monaco, Consolas, "Courier New", monospace;
+	font-weight: 300;
+	overflow: hidden;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.controlBar {
+	overflow: visible;
+	background-color: #1b1b1b;
+	background-image: none;
+	border: 0;
+	border-width: 0 0 1px;
+	position: relative;
+	z-index: 7000;
+	color: #ffffff;
+	font-weight: bold;
+	.k-separator {
+		min-width: 280px;
+		background-color: transparent;
+		border-width: 0px;
+	}
+	.k-button {
+		color: #ffffff;
+		//border-color: #0202ff;
+		//background-color: #133a60;
+	}
+
+	.k-button:hover {
+		background-color: red;
+	}
+
+	a {
+		border: none;
+		background-color: transparent;
+	}
+
+	span[data="version"]{
+		margin-left: 8px;
+	}
+}
+
+.controlBar .k-button[disabled], .controlBar .k-button.k-state-disabled, .controlBar .k-state-disabled .k-button, .controlBar .k-state-disabled .k-button:hover, .controlBar .k-button.k-state-disabled:hover, .controlBar .k-state-disabled .k-button:active, .controlBar .k-button.k-state-disabled:active {
+	color: #ffffff;
+	border-color: #1b1b1b;
+	background-color: #1b1b1b;
+}
+
+@-webkit-keyframes  twinkling{
+	0%{
+		opacity: 0.3;
+	}
+	100%{
+		opacity: 1;
+	}
+}
+
+#toolBtn-ip {
+	visibility: hidden;
+}
+
+
+/**
+中间部分，需要层叠绘制
+***/
+
+.middle {
+	position: relative;
+	// 速度测试仪表盘
+	#speed-canvas{
+		height: @UIC-height;
+		width: @UIC-width;
+	}
+
+	#servers-canvas{
+		height: @UIC-height;
+		width: @UIC-width;
+        margin-top: -36px;
+	}
+}
+
+
+.middle {
+	#mainGrid {
+		width: 220px;
+		max-width: 220px;
+		display: inline-block;
+		td {
+			height: 36px;
+			padding: 0em;
+		}
+		.item-plugin {
+			line-height: .03em;
+			.item-name {
+				float: left;
+				margin-left: 8px;
+			}
+			.item-image {
+				width: 18px;
+				float: right;
+				margin-right: 24px;
+			}
+		}
+	}
+	#drawer-canvas {
+		display: inline-block;
+	}
+}
+
+#ip-grid {
+	max-width: 400px;
+	background-color: greenyellow;
+	font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+	.k-grid-header {
+		display: none;
+	}
+	td {
+		height: 36px;
+		padding: 0em;
+	}
+	.item-ipinfo {
+//		line-height: .03em;
+		padding: 8px;
+	}
+	.item-group {
+		font-weight: bold;
+		background-color: #2DB10C;
+		font-size: 15px;
+		text-shadow: 0 0 20px #F5732A;
+		color: #fff;
+	}
+	.item-desc {
+		float: left;
+		margin-left: 8px;
+	}
+	.item-image {
+		width: 18px;
+		float: right;
+		margin-right: 24px;
+		cursor: pointer;
+	}
+}
+
+.footer {
+	position: relative;
+	text-align: center;
+	margin-top: -36px;
+
+	#progress{
+		width: 80%;
+		margin-bottom: 24px;
+		background-color: #1b1b1b;
+		border-color: #333333;
+		//height: 100%;
+		color: #ffffff;
+
+		.k-state-selected{
+			background-color: #6ecc08;
+			border-color: #6ecc08;
+		}
+		.k-progress-status{
+			font-size: 13px;
+		}
+	}
+
+	#btnStart {
+		background-color: orangered;
+		border-color: orangered;
+		width: 220px;
+		height: 64px;
+		font-size: 24px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+}
+
+
+#settings-window, #autoTestConfig-window {
+	padding: 0;
+	.windowsBackground{}
+
+	.settings-panel {
+		.app-section {
+
+			.runningInfo{
+				text-align: center;
+				width: 98%;
+				color: #df5100;
+				font-size: 15px;
+				text-shadow: 0 1px 1px #000;
+			}
+
+
+			.app-fieldList{
+				margin:0;
+				padding:0;
+
+				li {
+					list-style: none;
+					padding: 10px 0;
+
+					label {
+						display: inline-block;
+						width: 150px;
+						margin-right: 5px;
+						text-align: right;
+					}
+				}
+			}
+		}
+		.k-footer{
+			 .k-button:first-child {
+				 margin-left: 45%;
+			 }
+		}
+	}
+}
+
+#feedBack-window{
+	.windowsBackground{}
+
+	.app-section {
+		padding: 4px;
+		.fieldlist {
+			margin: 0 0 -1em;
+			padding: 0;
+		}
+
+		.fieldlist li {
+			list-style: none;
+			padding-bottom: 1em;
+			line-height: 3em;
+		}
+
+		.fieldlist label {
+			display: block;
+			font-weight: bold;
+			text-transform: uppercase;
+			font-size: 12px;
+			color: #444;
+		}
+
+		.fieldlist input, textarea {
+			font-family: "Helvetica Neue", Helvetica, Menlo, Monaco, Consolas, "Courier New", monospace;
+			font-size: 12px;
+			color: #444;
+			padding: 10px 15px;
+			border: 1px solid #EEE;
+			margin-bottom: 8px;
+		}
+
+		.fieldlist input {
+			width: 66%;
+		}
+
+		.fieldlist textarea {
+			width: 92%;
+			resize: none;
+		}
+
+		.fieldlist li.status {
+			text-align: center;
+		}
+
+		.fieldlist li .k-widget:not(.k-tooltip),
+		.fieldlist li .k-textbox {
+			margin: 0 5px 5px 0;
+		}
+
+		.confirm {
+			padding-top: 1em;
+		}
+
+		.valid {
+			color: green;
+		}
+
+		.invalid {
+			color: red;
+		}
+	}
+
+	.k-footer{
+		text-align:center;
+		.k-button {
+			width: 100%;
+		}
+	}
+}
+
