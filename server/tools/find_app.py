@@ -28,6 +28,7 @@ import timeit
 import time
 import platform
 import threading
+from operator import itemgetter
 
 __version__ = '1.0.0'
 
@@ -73,7 +74,7 @@ def open_folder(fnc_sendFeedbackMessage, commandObj={}):
     path = '/'
     if commandObj and commandObj.get('path'):
         path = commandObj.get('path')
-    os.popen('open ' + path)
+    os.system('open ' + path)
     info = dict(type='success', msg='open folder success')
     send_json_message(info)
 
@@ -121,17 +122,18 @@ def find_app_form_folder(fnc_sendFeedbackMessage, commandObj={}):
             path_array.append(columns[0])
 
         option = ''
-        if recursion:
+        if not recursion:
             option = ' -maxdepth 1 '
         apps = []
         for path in path_array:
-            reuslts = os.popen('find ' + path + option + '-iname \'*'
-                      + commandObj.get('keyword') + '\'.app -print').readlines()
+            reuslts = os.popen('find ' + path + option + ' -iname \'*'
+                      + commandObj.get('keyword') + '*.app\' -print').readlines()
             for line in reuslts:
                 app = dict()
-                app['name'] = os.path.basename(line)
+                app['name'] = os.path.basename(line).strip('\n')
                 app['path'] = line.strip('\n')
                 apps.append(app)
+        apps = sorted(apps, key=lambda p:p['name'])
         send_json_message(dict(type='find_app_success', data=apps))
     except:
         send_error('find app fail')
@@ -160,6 +162,7 @@ def load_folder(fnc_sendFeedbackMessage, commandObj={}):
                     continue
                 columns = line.strip('\n').split(',')
                 folders.append(columns)
+            folders = sorted(folders, key=itemgetter(1,0))
             send_json_message(dict(type='load-folder-success',
                                    data=folders))
         except IOError:
@@ -184,15 +187,19 @@ def add_select_folder(fnc_sendFeedbackMessage, commandObj={}):
         folder_path = commandObj.get('folder_path').strip('\n')
     data_file = None
     try:
-        data_file = open(data_file_path, 'a+')
+        data_file = open(data_file_path, 'r')
+        data_lines = data_file.readlines()
+        data_file.close();
         folder_exist = False
-        for line in data_file.readlines():
+        for line in data_lines:
             if line.strip('\n') == '':
                 continue
             columns = line.strip('\n').split(',')
             if len(columns) == 2 and columns[0] == folder_path:
                 folder_exist = True
+                break
         if not folder_exist:
+            data_file = open(data_file_path, 'a')
             data_file.write(folder_path + ',1\n')
             send_json_message(dict(type='add_select_folder_success',
                                    data=[folder_path, 1]))
@@ -247,9 +254,9 @@ def __init_selected_folder(file_path):
     data_file = None
     try:
         data_file = open(file_path, 'w')
-        data_file.write(os.path.expanduser('~') + '/Applications,0\n')
-        data_file.write('/Applications,0\n')
-        data_file.write('/System/Library/CoreServices,0\n')
+        #data_file.write(os.path.expanduser('~') + '/Applications,0\n')
+        #data_file.write('/Applications,0\n')
+        #data_file.write('/System/Library/CoreServices,0\n')
     except IOError:
         send_error('can not read file: '+file_path)
     finally:
@@ -290,6 +297,10 @@ def CLIRun(fnc_sendFeedbackMessage, commandObj={}):
         find_app_form_folder(fnc_sendFeedbackMessage, parameters)
     elif method == 'load_folder':
         load_folder(fnc_sendFeedbackMessage, parameters)
+    elif method == 'add_select_folder':
+        add_select_folder(fnc_sendFeedbackMessage, parameters)
+    elif method == 'remove_select_folder':
+        remove_select_folder(parameters)
 
 
 """

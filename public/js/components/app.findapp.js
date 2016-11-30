@@ -80,24 +80,19 @@
             $.each(result, function(index, el){
                 console.log(index + ':' + el.path);
                 // var info = {'AppIcon2PngPath': c$.app_options.default_applicationIcon};
-                b$.App.getOtherAppInfo(el.path, function(info){
-                    // info = {
-                    //             AppBuildVersion: "12602.2.14.0.7",
-                    //             AppCategoryType: "public.app-category.productivity",
-                    //             AppIcon2PngPath: c$.app_options.default_applicationIcon,
-                    //             AppIconPath: "/Applications/Safari.app/Contents/Resources/compass.icns",
-                    //             AppIconValue: "compass",
-                    //             AppId: "com.apple.Safari",
-                    //             AppName: "Safari",
-                    //             AppVersion: "10.0.1"
-                    //     };
-                    if(info && !info.AppIcon2PngPath){
-                        info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
-                    }
-                    el['info'] = info;
-                    // console.log('callback info:' + $.obj2string(info));
-                    container.append(templateShowSearchResultSingle(el));
-                    kendo.bind($('.btn-open-folder'), eventViewModel);
+                b$.App.getOtherAppInfo(el.path, function(obj){
+                	if(obj.success){
+                		var info = obj.info;
+                		
+                		console.log(info.AppIcon2PngPath);
+	                    if(info && !info.AppIcon2PngPath){
+	                        info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
+	                    }
+	                    el['info'] = info;
+	                    // console.log('callback info:' + $.obj2string(info));
+	                    container.append(templateShowSearchResultSingle(el));
+	                    kendo.bind($('.btn-open-folder'), eventViewModel);
+                	}
                 });
                 // var info = {
                 //             AppBuildVersion: "12602.2.14.0.7",
@@ -228,8 +223,6 @@
                 if(contType && contType != "RTS_DL" && contType != "RTS_UL"){
                     $.reportInfo({"SYS_state": contType || "", "SYS_data": info2 || ""});
                 }
-                console.log(contType);
-                c$.showFindResult('');
                 if (contType == 'find_app_success'){
                     var _findApp_result_data = pyMsgObj.data;
                     c$.showFindResult(_findApp_result_data);
