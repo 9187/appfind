@@ -80,7 +80,7 @@
             $.each(result, function(index, el){
                 console.log(index + ':' + el.path);
                 // var info = {'AppIcon2PngPath': c$.app_options.default_applicationIcon};
-                b$.App.getOtherAppInfo(el.path, function(info){
+                b$.App.getOtherAppInfo(el.path, function(obj){
                     // info = {
                     //             AppBuildVersion: "12602.2.14.0.7",
                     //             AppCategoryType: "public.app-category.productivity",
@@ -91,7 +91,12 @@
                     //             AppName: "Safari",
                     //             AppVersion: "10.0.1"
                     //     };
-                    if(info && !info.AppIcon2PngPath){
+                    console.log(JSON.stringify(obj));
+                    var info = obj.info;
+                    if(!obj.success ){
+                        info = {}
+                    }
+                    if(obj.success && !info.AppIcon2PngPath){
                         info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
                     }
                     el['info'] = info;
@@ -229,7 +234,7 @@
                     $.reportInfo({"SYS_state": contType || "", "SYS_data": info2 || ""});
                 }
                 console.log(contType);
-                c$.showFindResult('');
+                // c$.showFindResult('');
                 if (contType == 'find_app_success'){
                     var _findApp_result_data = pyMsgObj.data;
                     c$.showFindResult(_findApp_result_data);
