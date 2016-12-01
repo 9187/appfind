@@ -256,6 +256,15 @@
                         c$.showSelectedFolder(_findApp_folder_data[_pathIndex][0],
                             _findApp_folder_data[_pathIndex][1]);
                     }
+                    if(_findApp_folder_data.length == 0){
+                        c$.b$.Notice.alert({
+                            content: 'In order to ensure the normal operation of the program, you need to add the "/Applicatioin" folder to the "Selected Folders"',
+                            title: 'Confirm',
+                            buttons: ['Confirm']
+                        }, function(){
+                            c$.addSelectFolder({folder_path: '/Applications'});
+                        });
+                    }
                     kendo.bind($('.btn-unselect-folder'), eventViewModel);
                 } else if (contType == "SYSTEM_runError"){
                     try{
