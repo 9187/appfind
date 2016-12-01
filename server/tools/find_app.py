@@ -163,7 +163,9 @@ def load_folder(fnc_sendFeedbackMessage, commandObj={}):
             send_json_message(dict(type='load-folder-success',
                                    data=folders))
         except IOError:
-            __init_selected_folder(file_path)
+            # __init_selected_folder(file_path)
+            send_json_message(dict(type='load-folder-success',
+                                   data=[]))
         finally:
             if data_file:
                 data_file.close()
