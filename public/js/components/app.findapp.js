@@ -40,8 +40,8 @@
 
     var templateShowSelectedFolder =
             kendo.template($('#template-show-selected-folder').html()),
-        templateShowSearchResult =
-            kendo.template($('#template-show-search-result').html()),
+        // templateShowSearchResult =
+        //     kendo.template($('#template-show-search-result').html()),
         templateShowSearchResultSingle =
             kendo.template($('#template-show-search-result-single').html());
 
