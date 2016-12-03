@@ -28,7 +28,6 @@ import timeit
 import time
 import platform
 import threading
-from operator import itemgetter
 
 __version__ = '1.0.0'
 
@@ -74,7 +73,7 @@ def open_folder(fnc_sendFeedbackMessage, commandObj={}):
     path = '/'
     if commandObj and commandObj.get('path'):
         path = commandObj.get('path')
-    os.system('open ' + path)
+    os.popen('open -R ' + path)
     info = dict(type='success', msg='open folder success')
     send_json_message(info)
 
@@ -162,11 +161,12 @@ def load_folder(fnc_sendFeedbackMessage, commandObj={}):
                     continue
                 columns = line.strip('\n').split(',')
                 folders.append(columns)
-            folders = sorted(folders, key=itemgetter(1,0))
             send_json_message(dict(type='load-folder-success',
                                    data=folders))
         except IOError:
-            __init_selected_folder(file_path)
+            # __init_selected_folder(file_path)
+            send_json_message(dict(type='load-folder-success',
+                                   data=[]))
         finally:
             if data_file:
                 data_file.close()
@@ -187,26 +187,30 @@ def add_select_folder(fnc_sendFeedbackMessage, commandObj={}):
         folder_path = commandObj.get('folder_path').strip('\n')
     data_file = None
     try:
-        data_file = open(data_file_path, 'r')
-        data_lines = data_file.readlines()
-        data_file.close();
+        data_file = open(data_file_path, 'a+')
         folder_exist = False
-        for line in data_lines:
+        logging.info('start check folder info')
+        for line in data_file.readlines():
             if line.strip('\n') == '':
                 continue
             columns = line.strip('\n').split(',')
             if len(columns) == 2 and columns[0] == folder_path:
                 folder_exist = True
-                break
         if not folder_exist:
-            data_file = open(data_file_path, 'a')
-            data_file.write(folder_path + ',1\n')
-            send_json_message(dict(type='add_select_folder_success',
-                                   data=[folder_path, 1]))
+            logging.info('start write folder info')
+            if folder_path == '/Applications':
+                data_file.write(folder_path + ',0\n')
+                send_json_message(dict(type='add_select_folder_success',
+                         data=[folder_path, 0]))
+            else:
+                data_file.write(folder_path + ',1\n')
+                send_json_message(dict(type='add_select_folder_success',
+                                data=[folder_path, 1]))
         else:  # 目录已经存在
             send_json_message(dict(type='add_select_folder_success',
                                    data=[]))
     except IOError:
+        logging.info('can not IO app data file')
         send_error('can not add folder \'' + folder_path
                    + '\' to data file: \'' + data_file_path + '\'')
     finally:
@@ -254,9 +258,9 @@ def __init_selected_folder(file_path):
     data_file = None
     try:
         data_file = open(file_path, 'w')
-        #data_file.write(os.path.expanduser('~') + '/Applications,0\n')
-        #data_file.write('/Applications,0\n')
-        #data_file.write('/System/Library/CoreServices,0\n')
+        data_file.write(os.path.expanduser('~') + '/Applications,0\n')
+        data_file.write('/Applications,0\n')
+        data_file.write('/System/Library/CoreServices,0\n')
     except IOError:
         send_error('can not read file: '+file_path)
     finally:

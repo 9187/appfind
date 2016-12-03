@@ -177,12 +177,14 @@ body{
   float: left;
   width:16px;
   padding-top: 16px;
+  font-size: 16px;
 }
 
 .result-app-info-unit{
   height:80px;
   border-bottom: 1px #ff6900 dotted;
   padding-top: 10px;
+  padding-left: 10px;
   /*width: 600px;*/
 }
 

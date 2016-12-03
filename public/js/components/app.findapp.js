@@ -29,8 +29,8 @@
         $(".kendo-splitter").kendoSplitter({
             orientation: "horizontal",
             panes: [
-                {collapsible: false, resizable: true, size: "300px", min: "280px"},
-                {collapsible: false, resizable: true}
+                {collapsible: false, resizable: false, size: "300px", min: "280px"},
+                {collapsible: false, resizable: false}
             ]
         });
         window.onresize = function(e){
@@ -40,8 +40,8 @@
 
     var templateShowSelectedFolder =
             kendo.template($('#template-show-selected-folder').html()),
-        templateShowSearchResult =
-            kendo.template($('#template-show-search-result').html()),
+        // templateShowSearchResult =
+        //     kendo.template($('#template-show-search-result').html()),
         templateShowSearchResultSingle =
             kendo.template($('#template-show-search-result-single').html());
 
@@ -81,18 +81,28 @@
                 console.log(index + ':' + el.path);
                 // var info = {'AppIcon2PngPath': c$.app_options.default_applicationIcon};
                 b$.App.getOtherAppInfo(el.path, function(obj){
-                	if(obj.success){
-                		var info = obj.info;
-                		
-                		console.log(info.AppIcon2PngPath);
-	                    if(info && !info.AppIcon2PngPath){
-	                        info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
-	                    }
-	                    el['info'] = info;
-	                    // console.log('callback info:' + $.obj2string(info));
-	                    container.append(templateShowSearchResultSingle(el));
-	                    kendo.bind($('.btn-open-folder'), eventViewModel);
-                	}
+                    // info = {
+                    //             AppBuildVersion: "12602.2.14.0.7",
+                    //             AppCategoryType: "public.app-category.productivity",
+                    //             AppIcon2PngPath: c$.app_options.default_applicationIcon,
+                    //             AppIconPath: "/Applications/Safari.app/Contents/Resources/compass.icns",
+                    //             AppIconValue: "compass",
+                    //             AppId: "com.apple.Safari",
+                    //             AppName: "Safari",
+                    //             AppVersion: "10.0.1"
+                    //     };
+                    console.log(JSON.stringify(obj));
+                    var info = obj.info;
+                    if(!obj.success ){
+                        info = {}
+                    }
+                    if(obj.success && !info.AppIcon2PngPath){
+                        info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
+                    }
+                    el['info'] = info;
+                    // console.log('callback info:' + $.obj2string(info));
+                    container.append(templateShowSearchResultSingle(el));
+                    kendo.bind($('.btn-open-folder'), eventViewModel);
                 });
                 // var info = {
                 //             AppBuildVersion: "12602.2.14.0.7",
@@ -167,12 +177,12 @@
         'openResultFolder': function(e){
             var el =  $(e.currentTarget),
                 folder_path = el.data('path');
-            var parentPath = b$.App.getPathParentPath(folder_path);
-            console.log(parentPath);
-            if(parentPath){
-                c$.openAppFolder({folder_path: parentPath});
-                console.log('open path: ' + parentPath);
-            }
+            // var parentPath = b$.App.getPathParentPath(folder_path);
+            // console.log(parentPath);
+            // if(parentPath){
+            c$.openAppFolder({folder_path: folder_path});
+            console.log('open path: ' + folder_path);
+            // }
         }
     });
     kendo.bind($('#input-key-word'), eventViewModel);
@@ -180,6 +190,7 @@
     kendo.bind($('.k-i-search'), eventViewModel);
 
     c$._p_findApp_dataPath = b$.App.getAppDataHomeDir();
+    console.log(c$._p_findApp_dataPath);
     c$._p_findApp_folderFileName = 'folder';
     c$._p_findApp_folderFile = c$._p_findApp_dataPath + '/'
             + c$._p_findApp_folderFileName;
@@ -223,6 +234,8 @@
                 if(contType && contType != "RTS_DL" && contType != "RTS_UL"){
                     $.reportInfo({"SYS_state": contType || "", "SYS_data": info2 || ""});
                 }
+                console.log(contType);
+                // c$.showFindResult('');
                 if (contType == 'find_app_success'){
                     var _findApp_result_data = pyMsgObj.data;
                     c$.showFindResult(_findApp_result_data);
@@ -243,6 +256,14 @@
                         }
                         c$.showSelectedFolder(_findApp_folder_data[_pathIndex][0],
                             _findApp_folder_data[_pathIndex][1]);
+                    }
+                    if(_findApp_folder_data.length == 0){
+                        b$.Notice.alert({
+                            message: 'In order to ensure the normal operation of the App, you need to add the "/Applicatioin" folder to the "Selected Folders"',
+                            title: 'Confirm',
+                            buttons: ['Confirm']
+                        });
+                        c$.addSelectFolder({folder_path: '/Applications'})
                     }
                     kendo.bind($('.btn-unselect-folder'), eventViewModel);
                 } else if (contType == "SYSTEM_runError"){
@@ -460,6 +481,7 @@
 
     c$.findApp = function(e){
         $('#search-result-list').html('');
+        $('.result-data-count').html('');
         // 检查当前的Python运行环境，是否具备启动标准
         if(c$.python.isPyWSisRunning){
             c$.python.configDebugLog(false);
