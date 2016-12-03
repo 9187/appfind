@@ -10,8 +10,13 @@ import tools
 
 class TestFindAppMethods(unittest.TestCase):
 
-    def test_init_folder(self):
-        tools.find_app._init_selected_folder('/home/jackie/app/folder')
+    # def test_init_folder(self):
+    #     tools.find_app._init_selected_folder('/home/jackie/app/folder')
+
+    def test_add_folder(self):
+        tools.find_app.add_select_folder(
+            None, {'data_file_path': '/Users/Yanan/Library/Application Support/DebugApp/folder',
+                   'folder_path': '/Users/Yanan/Applications'})
 
 if __name__ == '__main__':
     unittest.main()
