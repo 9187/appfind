@@ -144,6 +144,8 @@
             }
         },
         'addFolder': function(e){
+            var span = $('#btn-add-find-path');
+            span.removeClass('add-icon').addClass('open-icon');
             // 选择文件夹
             b$.selectOutDir({
                 callback: b$._get_callback(function(obj){
@@ -151,11 +153,13 @@
                     var result = obj,
                         folder_path = result['filesArray'][0].filePath;
                     c$.addSelectFolder({folder_path: folder_path});
+
                     console.log('add folder to select: ' + result['filesArray'][0].filePath);
                 }, true),
                 title: "Select Find App Folder",
                 prompt: "Confirm"
             });
+            span.removeClass('open-icon').addClass('add-icon');
         },
         'removeFolder': function(e){
             var _confirm_remove_folder = b$.Notice.alert({
