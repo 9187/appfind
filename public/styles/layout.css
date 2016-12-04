@@ -9,6 +9,7 @@ body{
   overflow: hidden;
   margin: 0;
   min-width: 400px;
+  font-family: "Lucida Grande","Lucida Sans Unicode","STHeitiSC-Light","Helvetica","Arial","Verdana","sans-serif";
 }
 
 .folder-info-unit{
@@ -136,6 +137,7 @@ body{
 
 .footer-right{
   float: right;
+  padding-right: 10px;
 }
 
 .search-folder-title{
@@ -147,6 +149,17 @@ body{
   border: none;
   background-color: transparent;
   outline-style: none;
+  width: 16px;
+  height: 16px;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.add-icon{
+  background-image: url('../images/add_2x.png');
+}
+.open-icon{
+  background-image: url('../images/open_folder.png');
 }
 
 .text-wrapper{
@@ -191,7 +204,7 @@ body{
 /*old */
 .result-data-count{
   font-size: 18px;
-  color: #64cc0e;
+  color: #4c4c4c;
   text-align: center;
 }
 
@@ -205,7 +218,7 @@ body{
 }
 
 .result-name{
-  color: #64cc0e;
+  color: #4c4c4c;
   font-size: 16px;
   font-weight: bold;
 }

@@ -187,25 +187,22 @@ def add_select_folder(fnc_sendFeedbackMessage, commandObj={}):
         folder_path = commandObj.get('folder_path').strip('\n')
     data_file = None
     try:
-        data_file = open(data_file_path, 'a+')
+        data_file = open(data_file_path, 'r')
+        data_lines = data_file.readlines()
+        data_file.close();
         folder_exist = False
-        logging.info('start check folder info')
-        for line in data_file.readlines():
+        for line in data_lines:
             if line.strip('\n') == '':
                 continue
             columns = line.strip('\n').split(',')
             if len(columns) == 2 and columns[0] == folder_path:
                 folder_exist = True
+                break
         if not folder_exist:
-            logging.info('start write folder info')
-            if folder_path == '/Applications':
-                data_file.write(folder_path + ',0\n')
-                send_json_message(dict(type='add_select_folder_success',
-                         data=[folder_path, 0]))
-            else:
-                data_file.write(folder_path + ',1\n')
-                send_json_message(dict(type='add_select_folder_success',
-                                data=[folder_path, 1]))
+            data_file = open(data_file_path, 'a')
+            data_file.write(folder_path + ',1\n')
+            send_json_message(dict(type='add_select_folder_success',
+                                   data=[folder_path, 1]))
         else:  # 目录已经存在
             send_json_message(dict(type='add_select_folder_success',
                                    data=[]))
