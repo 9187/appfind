@@ -73,7 +73,7 @@ def open_folder(fnc_sendFeedbackMessage, commandObj={}):
     path = '/'
     if commandObj and commandObj.get('path'):
         path = commandObj.get('path')
-    os.popen('open -R ' + path)
+    os.popen('open -R \'' + path + '\'')
     info = dict(type='success', msg='open folder success')
     send_json_message(info)
 
@@ -187,7 +187,10 @@ def add_select_folder(fnc_sendFeedbackMessage, commandObj={}):
         folder_path = commandObj.get('folder_path').strip('\n')
     data_file = None
     try:
-        data_file = open(data_file_path, 'r')
+        if not os.path.exists(data_file_path):
+            data_file = open(data_file_path, 'w+')
+        else:
+            data_file = open(data_file_path, 'r')
         data_lines = data_file.readlines()
         data_file.close();
         folder_exist = False
@@ -200,9 +203,14 @@ def add_select_folder(fnc_sendFeedbackMessage, commandObj={}):
                 break
         if not folder_exist:
             data_file = open(data_file_path, 'a')
-            data_file.write(folder_path + ',1\n')
-            send_json_message(dict(type='add_select_folder_success',
-                                   data=[folder_path, 1]))
+            if folder_path == '/Applications':
+                data_file.write(folder_path + ',0\n')
+                send_json_message(dict(type='add_select_folder_success',
+                                   data=[folder_path, 0]))
+            else:
+                data_file.write(folder_path + ',1\n')
+                send_json_message(dict(type='add_select_folder_success',
+                                       data=[folder_path, 1]))
         else:  # 目录已经存在
             send_json_message(dict(type='add_select_folder_success',
                                    data=[]))
