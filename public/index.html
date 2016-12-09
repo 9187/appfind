@@ -80,6 +80,7 @@
             </a>
             # } #
         </div>
+        <div class="common-clear"></div>
     </div>
 </script>
 
@@ -119,7 +120,7 @@
     <div class="result-app-info-unit">
         <div class="result-app-info">
             # if(info.AppIcon2PngPath){#
-            <div class="app-icon">
+            <div class="app-icon" title="#= path #">
                 <img src="#= info.AppIcon2PngPath #">
             </div>
             # } #
@@ -130,7 +131,7 @@
                     <span class="text-help" style="font-size: 0.6em;">&nbsp;(V#= info.AppVersion #)</span>
                     #}#
                 </p>
-                <p class="text-wrapper text-help" >
+                <p class="text-wrapper text-help" title="#= path #">
                     <span title="#= path #">#= path #</span>
                 </p>
 
