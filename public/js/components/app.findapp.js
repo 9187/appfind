@@ -140,8 +140,6 @@
             var el = $(e.currentTarget),
                 keyword = $.trim(el.val());
             if(keyword){
-                c$.unlockLoadingUI();
-                c$.loadingUI();
                 c$.findApp({"keyword": keyword});
             }else{
                 $('#search-result-list').html('').removeClass('no-backimg');
@@ -506,10 +504,10 @@
 
             /// 调用核心方法
             var findSubFolder = $('.recursion-sub-folder:checked').length;
-            // c$.unlockLoadingUI();
-            // if(findSubFolder){
-            //
-            // }
+            if(findSubFolder){
+                c$.unlockLoadingUI();
+                c$.loadingUI();
+            }
             c$.pythonAddon.common_service(c$._p_findApp_server_moudel,
                 {'method':'find_app_form_folder',
                     'parameters':{
