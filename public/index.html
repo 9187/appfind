@@ -117,6 +117,7 @@
     # } #
 </script>
 <script id="template-show-search-result-single" type="text/x-kendo-template">
+    # if(info.AppName){ #
     <div class="result-app-info-unit">
         <div class="result-app-info">
             # if(info.AppIcon2PngPath){#
@@ -145,6 +146,7 @@
         </div>
     </div>
     <div class="common-clear"></div>
+    # } #
 </script>
 
 <!--基础库加载-->
