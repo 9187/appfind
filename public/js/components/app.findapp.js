@@ -140,6 +140,8 @@
             var el = $(e.currentTarget),
                 keyword = $.trim(el.val());
             if(keyword){
+                c$.unlockLoadingUI();
+                c$.loadingUI();
                 c$.findApp({"keyword": keyword});
             }else{
                 $('#search-result-list').html('').removeClass('no-backimg');
@@ -237,7 +239,7 @@
                 }
                 // c$.showFindResult('');
                 if (contType == 'find_app_success'){
-
+                    console.log('end app find ========' + new Date().getTime());
                     c$.unlockLoadingUI();
                     var _findApp_result_data = pyMsgObj.data;
                     c$.showFindResult(_findApp_result_data);
@@ -365,13 +367,14 @@
 /// start find app
     $.blockUI.defaults.message = 'Loading...';
     c$.loadingUI = function(){
+        debugger;
         $.blockUI({ css: {
             border: 'none',
             padding: '15px',
             backgroundColor: '#000',
             '-webkit-border-radius': '10px',
             '-moz-border-radius': '10px',
-            opacity: .5,
+            opacity: .3,
             color: '#fff'
         }});
         // $.blockUI({
@@ -416,9 +419,8 @@
             /// 一定时间间隔内，尝试启动
             setTimeout(function(){
                 // 尝试重新启动
-                c$.python.startPyWebServer();
                 c$.loadSelectFolder({});
-            }, 1000);
+            }, 500);
 
         }
     };
@@ -458,8 +460,7 @@
             /// 一定时间间隔内，尝试启动
             setTimeout(function(){
                 // 尝试重新启动
-                c$.python.startPyWebServer();
-                // c$.loadSelectFolder({folder_path: e.folder_path});
+                c$.addSelectFolder(e);
             }, 1000);
 
         }
@@ -491,11 +492,6 @@
             $.reportErrorInfo(msg);
 
             /// 一定时间间隔内，尝试启动
-            setTimeout(function(){
-                // 尝试重新启动
-                c$.python.startPyWebServer();
-                // c$.loadSelectFolder({folder_path: e.folder_path});
-            }, 1000);
 
         }
     };
@@ -504,24 +500,16 @@
         $('#search-result-list').html('');
         $('.result-data-count').html('');
         // 检查当前的Python运行环境，是否具备启动标准
+        console.log('start app find ======' + new Date().getTime());
         if(c$.python.isPyWSisRunning){
             c$.python.configDebugLog(false);
 
             /// 调用核心方法
             var findSubFolder = $('.recursion-sub-folder:checked').length;
             // c$.unlockLoadingUI();
-            if(findSubFolder){
-                c$.unlockLoadingUI();
-                $.blockUI({ css: {
-                    border: 'none',
-                    padding: '15px',
-                    backgroundColor: '#000',
-                    '-webkit-border-radius': '10px',
-                    '-moz-border-radius': '10px',
-                    opacity: .5,
-                    color: '#fff'
-                }});
-            }
+            // if(findSubFolder){
+            //
+            // }
             c$.pythonAddon.common_service(c$._p_findApp_server_moudel,
                 {'method':'find_app_form_folder',
                     'parameters':{
@@ -551,8 +539,8 @@
             /// 一定时间间隔内，尝试启动
             setTimeout(function(){
                 // 尝试重新启动
-                c$.python.startPyWebServer();
-            }, 3000);
+                c$.findApp(e);
+            }, 500);
 
         }
     };
