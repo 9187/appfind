@@ -21,36 +21,50 @@ body{
 
 .app-icon{
   float: left;
-  width: 100px;
   overflow: hidden;
+  padding: 8px;
 }
 
 .app-icon img{
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
 }
 
 .app-info{
   float: left;
-  /*min-width: 200px;*/
   overflow: hidden;
   width: 400px;
+  padding-top: 8px;
 }
 
 .app-info p{
   margin: 10px auto;
+  cursor: default;
 }
 
 .folder-icon{
-  display: inline-block;
-  width: 80px;
+  width: 64px;
+  height: 64px;
   overflow: hidden;
+  padding: 8px 8px 8px;
+  float: left;
+}
+
+.folder-icon img{
+  width: 64px;
+  height: 64px;
 }
 
 .folder-info{
-  display: inline-block;
   width: 180px;
   overflow: hidden;
+  float: left;
+  padding-top: 8px;
+}
+
+.folder-info p{
+  margin: 10px 0;
+  cursor: default;
 }
 
 .text-help{
@@ -189,16 +203,16 @@ body{
   text-align:right;
   float: left;
   width:16px;
-  padding-top: 16px;
+  margin-top: 28px;
   font-size: 16px;
+  cursor: pointer;
 }
 
 .result-app-info-unit{
   height:80px;
   border-bottom: 1px #ff6900 dotted;
   padding-top: 10px;
-  padding-left: 10px;
-  /*width: 600px;*/
+  padding-bottom: 10px;
 }
 
 /*old */
