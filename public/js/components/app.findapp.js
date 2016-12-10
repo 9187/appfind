@@ -48,7 +48,6 @@
     c$.showSelectedFolder = function(path, isUser){
         var container = $('#selected-folder-list');
         var icon = b$.App.getFileOrDirIconPath(path);
-        console.log(icon);
         // debugger;
         if(!icon){
             icon = c$.app_options.default_folderIcon;
@@ -68,9 +67,9 @@
         //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
         //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'},
         //     {'name': 'd.app', 'path': '/a/b/c', 'version': 'v1.2'}];
-        var container = $('#search-result-list');
+        var container = $('#search-result-list'),
+            resultLength = result.length;
 
-        $('.result-data-count').text(result.length);
         if(result.length == 0){
             container.removeClass('no-backimg');
             container.html('<div class="nothing-result"><span>Found Nothing !</span></div>');
@@ -78,7 +77,6 @@
             container.addClass('no-backimg');
 
             $.each(result, function(index, el){
-                console.log(index + ':' + el.path);
                 // var info = {'AppIcon2PngPath': c$.app_options.default_applicationIcon};
                 b$.App.getOtherAppInfo(el.path, function(obj){
                     // info = {
@@ -91,16 +89,18 @@
                     //             AppName: "Safari",
                     //             AppVersion: "10.0.1"
                     //     };
-                    console.log(JSON.stringify(obj));
                     var info = obj.info;
                     if(!obj.success ){
-                        info = {}
+                        info = {};
+                    }
+                    if( ! info['AppName'] ){
+                        resultLength -= 1;
+                        $('.result-data-count').text(resultLength);
                     }
                     if(obj.success && !info.AppIcon2PngPath){
                         info['AppIcon2PngPath'] = c$.app_options.default_applicationIcon;
                     }
                     el['info'] = info;
-                    // console.log('callback info:' + $.obj2string(info));
                     container.append(templateShowSearchResultSingle(el));
                     kendo.bind($('.btn-open-folder'), eventViewModel);
                 });
@@ -129,6 +129,7 @@
                 // el['info'] = info;
                 // console.log(el);
             });
+            $('.result-data-count').text(resultLength);
         }
     };
 
@@ -140,7 +141,9 @@
                 keyword = $.trim(el.val());
             if(keyword){
                 c$.findApp({"keyword": keyword});
-                console.log('find app key word: ' + keyword);
+            }else{
+                $('#search-result-list').html('').removeClass('no-backimg');
+                $('.result-data-count').html('');
             }
         },
         'addFolder': function(e){
@@ -154,7 +157,6 @@
                         folder_path = result['filesArray'][0].filePath;
                     c$.addSelectFolder({folder_path: folder_path});
 
-                    console.log('add folder to select: ' + result['filesArray'][0].filePath);
                 }, true),
                 title: "Select Find App Folder",
                 prompt: "Confirm"
@@ -167,7 +169,6 @@
                 "message":'Are you sure to remove the folder ?',
                 "buttons": ['Cancel', 'Ok']
                 });
-            console.log(_confirm_remove_folder);
             if(_confirm_remove_folder){
                 var el =  $(e.currentTarget),
                     folder_path = el.data('path');
@@ -175,7 +176,6 @@
                     data: function(){
                         el.parent().parent().remove();
                     }});
-                console.log('remove folder: '+ folder_path);
             }
         },
         'openResultFolder': function(e){
@@ -185,7 +185,6 @@
             // console.log(parentPath);
             // if(parentPath){
             c$.openAppFolder({folder_path: folder_path});
-            console.log('open path: ' + folder_path);
             // }
         }
     });
@@ -194,13 +193,13 @@
     kendo.bind($('.k-i-search'), eventViewModel);
 
     c$._p_findApp_dataPath = b$.App.getAppDataHomeDir();
-    console.log(c$._p_findApp_dataPath);
     c$._p_findApp_folderFileName = 'folder';
     c$._p_findApp_folderFile = c$._p_findApp_dataPath + '/'
             + c$._p_findApp_folderFileName;
     c$._p_findApp_server_moudel = 'find_app';
 
     c$._p_callFindApp_callback = function(obj){
+
         var msgPackage = obj.data;
 
         try{
@@ -233,14 +232,13 @@
                 }
                 var contType = pyMsgObj.type;
                 var info2 = pyMsgObj.info;
-                console.log('callback type:' + contType);
-                console.log('callback info:' + info2);
                 if(contType && contType != "RTS_DL" && contType != "RTS_UL"){
                     $.reportInfo({"SYS_state": contType || "", "SYS_data": info2 || ""});
                 }
-                console.log(contType);
                 // c$.showFindResult('');
                 if (contType == 'find_app_success'){
+
+                    c$.unlockLoadingUI();
                     var _findApp_result_data = pyMsgObj.data;
                     c$.showFindResult(_findApp_result_data);
                 }else if (contType == 'add_select_folder_success'){
@@ -251,7 +249,6 @@
                         kendo.bind($('.btn-unselect-folder:last-child'), eventViewModel);
                     }
                 }else if (contType == 'load-folder-success'){
-                    console.log(pyMsgObj.data);
                     var _findApp_folder_data = pyMsgObj.data;
                     for(var _pathIndex = 0; _pathIndex <  _findApp_folder_data.length;
                             _pathIndex ++){
@@ -366,6 +363,26 @@
     };
 
 /// start find app
+    $.blockUI.defaults.message = 'Loading...';
+    c$.loadingUI = function(){
+        $.blockUI({ css: {
+            border: 'none',
+            padding: '15px',
+            backgroundColor: '#000',
+            '-webkit-border-radius': '10px',
+            '-moz-border-radius': '10px',
+            opacity: .5,
+            color: '#fff'
+        }});
+        // $.blockUI({
+        //     message: '<div style="width: 100%;height: 100%; background-color: transparent; color:#fff; border: none;">Loading...</div>'
+        // });
+    };
+
+    c$.unlockLoadingUI = function () {
+        $.unblockUI();
+    };
+
     c$.loadSelectFolder = function(e){
         // 检查当前的Python运行环境，是否具备启动标准
         if(c$.python.isPyWSisRunning){
@@ -491,19 +508,35 @@
             c$.python.configDebugLog(false);
 
             /// 调用核心方法
+            var findSubFolder = $('.recursion-sub-folder:checked').length;
+            // c$.unlockLoadingUI();
+            if(findSubFolder){
+                c$.unlockLoadingUI();
+                $.blockUI({ css: {
+                    border: 'none',
+                    padding: '15px',
+                    backgroundColor: '#000',
+                    '-webkit-border-radius': '10px',
+                    '-moz-border-radius': '10px',
+                    opacity: .5,
+                    color: '#fff'
+                }});
+            }
             c$.pythonAddon.common_service(c$._p_findApp_server_moudel,
                 {'method':'find_app_form_folder',
                     'parameters':{
                         'data_file_path': c$._p_findApp_folderFile,
                         'keyword': e.keyword,
-                        'recursion': $('.recursion-sub-folder:checked').length
-                    }}, c$._p_callFindApp_callback);
+                        'recursion': findSubFolder
+                    }},
+                    c$._p_callFindApp_callback);
 
             if($.isFunction(e.data)){
                 var cb = e.data;
                 cb && cb();
             }
         }else{
+            c$.unlockLoadingUI();
             var msg = "Starting the test engine service, please wait...";
 
             // 告知服务器
