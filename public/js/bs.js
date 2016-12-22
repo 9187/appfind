@@ -22,6 +22,19 @@
  *                      添加获取其他文件或目录图标路径(png格式文件)的接口
  *                      添加获取其他App的基本信息的接口
  *                      添加得到一个临时随机文件路径的接口
+ * 2016年11月28日19:59:15
+ *                      添加重启启动App的接口 App.relanuch
+ *
+ * 2016年12月1日10:04:01
+ *                      补充两个获取路径的接口
+ *                      (1)获得本地desktop目录路径
+ *                      (2)获得本地Library目录路径
+ * 2016年12月4日19:57:47
+ *                      添加向后兼容性代码参数处理
+ *
+ * 2016年12月6日
+ *                     根据演示业务需要，加强IAP内置购买的模拟测试
+ *
  */
 
 (function(factory) {
@@ -126,35 +139,208 @@
             path: "/plugin.iap.bundle"
         };
 
+
+        // IAP 非本地模拟
+        b$.IAP_SE_KEY = "RSSDK_SE_SANBOX_IAP";
+        b$.IAP_SE_OBJ = {};
+        b$.IAP_SE_Wrapper = {
+            productIdentifiers:[],   //商品的ID 数组
+            caller: $.Callbacks()     //消息回调处理
+        };
+
         // IAP 功能封装
         b$.cb_handleIAPCallback = null; // IAP的回调函数
         b$.IAP = {
+            NoticeCenter:$.Callbacks(), // 参照Jquery.Callbacks消息回调处理。增加动态注册监控信息的回调处理。是一种扩展
+            MessageType:(function () {  // 开放内核中的消息
+                var msg = [
+                    ///{常用购买流程}
+                    "ProductsLoaded",
+                    "ProductBuyFailed",
+                    "ProductPurchased",
+                    "ProductPurchaseFailed",
+                    "ProductPurchaseFailedDetail",
+                    "ProductRequested",
+                    "ProductCompletePurchased",
 
+                    ///{恢复购买部分}
+                    "ProductsPaymentQueueRestoreCompleted",
+                    "ProductsPaymentRestoreCompletedTransactionsFailed",
+                    "ProductsPaymentRemovedTransactions",
+                    "ProductsPaymentUpdatedDownloads"
+                ];
+
+                var obj = {};
+                var i = 0;
+                for (i = 0; i <msg.length; ++i){
+                    var msgType = msg[i];
+                    obj[msgType] = msgType;
+                }
+
+                return obj;
+            })(),
+
+            data:{
+                /// 产品信息是否发送请求核实并得到同步信息过。IAP机制
+                productIsRequested: false,
+
+                /// 内置产品Map
+                productInfoMap:{},
+                /// 内置的产品信息List
+                productInfoList:[],
+
+
+                ///Methods
+                reInit: function(){  /// 核心重新初始化
+                    var t$ = this;
+                    t$.productIsRequested = false;
+                    t$.productInfoMap = {};
+                    t$.productInfoList = [];
+
+                },
+                getProductObj: function (productIdentifier) { /// 获取商品对象
+                    var t$ = this;
+                    var obj = null;
+                    if (t$.productInfoMap[productIdentifier]){
+                        obj = t$.productInfoMap[productIdentifier];
+                    }
+                    return obj;
+                },
+                getPrice: function (productIdentifier) {
+                    var t$ = this;
+                    var obj = t$.getProductObj(productIdentifier);
+                    if (obj){
+                        return obj.price;
+                    }
+
+                    return null;
+                },
+                getDescription: function (productIdentifier) {
+                    var t$ = this;
+                    var obj = t$.getProductObj(productIdentifier);
+                    if (obj){
+                        return obj.description;
+                    }
+
+                    return null;
+                }
+
+            },
+
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////////
+            /////////////////////////////////////////////////////////////////////////////////////////////////////
             /// 获取本地配置是否可以使用IAP。参见：project.json
             getEnable: function() {
+                var t$ = this;
                 if (b$.pN) {
                     try {
                         return b$.pN.app.getIAPEnable();
                     } catch (e) {
                         console.error(e)
                     }
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    var obj = window.localStorage.getItem(b$.IAP_SE_KEY);
+                    if (!obj){
+                        window.localStorage.setItem(b$.IAP_SE_KEY, JSON.stringify(b$.IAP_SE_OBJ));
+                    }else{
+                        b$.IAP_SE_OBJ = JSON.parse(obj);
+                    }
+
+                    return true; //非本地环境返回True，方便测试
                 }
                 return false;
             },
 
             enableIAP: function(in_parms, cb) {
+                var t$ = this;
+
                 try {
                     $.testObjectType(in_parms, 'object');
 
                     var parms = {};
                     parms["cb_IAP_js"] = in_parms["cb_IAP_js"] || b$._get_callback(function(obj) {
+                        //////////////////////////内部处理//////////////////////////////////
+                        try{
+                            if ($.isPlainObject(obj)){
+                                var info = obj.info;
+                                var notifyType = obj.notifyType;
+
+                                if(notifyType == t$.MessageType["ProductRequested"]){
+                                    if(typeof info == "string"){
+                                        info = JSON.parse(info);
+                                    }
+
+                                    t$.data.productIsRequested = true;
+                                    t$.data.productInfoList = info;
+
+                                    $.each(t$.data.productInfoList, function(index, product){
+                                       t$.data.productInfoMap[product.productIdentifier] = {
+                                           productIdentifier: product.productIdentifier, // 商品ID
+                                           description: product.description || "", // 商品描述
+                                           buyUrl: product.buyUrl || "",     // 外部购买链接
+                                           price: product.price || ""        // 价格
+                                       }
+                                    });
+                                }
+
+                            }
+                        }catch(e){
+                            console.error(e);
+                        }
+
+                        try{
+                            b$.IAP.NoticeCenter.fire(obj);
+                        }catch (e){}
+
+
+                        ///////////////////////////外部处理/////////////////////////////////
                         if ($.isFunction(b$.cb_handleIAPCallback)) {
                             b$.cb_handleIAPCallback && b$.cb_handleIAPCallback(obj);
                         } else {
                             cb && cb(obj);
                         }
+
+                        //////////////////////////////////////////////////////////////////
                     }, true);
-                    parms["productIds"] = in_parms["productIds"] || [];
+
+                    /// 数据校验
+                    console.assert($.RTYUtils.isString(parms["cb_IAP_js"]) == true, "must be function string");
+
+                    ///Ian(原先的方式)
+                    if ($.RTYUtils.isArray(in_parms["productIds"])){
+                        parms["productIds"] = in_parms["productIds"] || [];
+                    }
+
+                    ///Ian 2016.12.06 现在的方式. 支持更高级的商品属性定义传入
+                    parms["products"] = [];
+                    if ($.RTYUtils.isArray(in_parms["products"])){ // [{productIdentifier, description, buyUrl, price}]
+                        try{
+                            var productIds = [];
+                            $.each(in_parms["products"], function (index, product) {
+                                productIds.push(product.productIdentifier);
+                            });
+
+                            if ($.RTYUtils.isUndefinedOrNull(parms["productIds"])){
+                                parms["productIds"] = productIds;
+                            }
+
+                            parms["products"] = in_parms["products"];
+
+                        }catch (e){
+                            console.error(e);
+                            alert(e);
+                        }
+                    }
+
+
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
 
                     if (b$.pN) {
                         //注册IAP回调
@@ -172,9 +358,42 @@
 
                             //发送商品请求
                             b$.pN.iap.requestProducts($.toJSON({
-                                productIdentifiers: parms.productIds || []
+                                productIdentifiers: parms.productIds || [],
+                                products: parms["products"] || []
                             }));
                         }
+                    }else{ /// 以下是Demo 处理
+
+                        ///注册模拟IAP回调
+                        b$.IAP_SE_Wrapper.caller.add(function (obj) {
+                            console.assert($.RTYUtils.isString(parms.cb_IAP_js) == true, "must be function string");
+
+                            var fnc = eval(parms.cb_IAP_js);
+                            if ($.RTYUtils.isFunction(fnc)){
+                                fnc && fnc(obj);
+                            }
+                        });
+
+                        ///注册商品ID
+                        b$.IAP_SE_Wrapper.productIdentifiers = parms.productIds || [];
+
+                        var productsInfo = [];
+                        $.each(parms.productIds, function (index, id) {
+                            var productObj = {
+                                productIdentifier: id,
+                                description: "Plugin Description and price demo for " + id,
+                                buyUrl: "",
+                                price: "$0.99"
+                            };
+
+                            productsInfo.push(productObj);
+                        });
+
+                        ///模拟发送获取产品信息
+                        b$.IAP_SE_Wrapper.caller.fire({
+                            notifyType:t$.MessageType.ProductRequested,
+                            info:productsInfo
+                        });
                     }
 
                 } catch (e) {
@@ -183,65 +402,274 @@
 
             },
 
+            _rebuildInfo: function () { // 重新构建
+                var t$ = this;
+
+                try{
+                    if (b$.pN) {
+                        b$.pN.iap.resetAll();
+                    }else{
+                        window.localStorage.removeItem(b$.IAP_SE_KEY);
+                    }
+
+                    t$.data.reInit();
+                }catch (e){}
+
+            },
+            _check: function (productIdentifier) { // 验证数据
+                var t$ = this;
+
+                //检测必须的参数
+                console.assert($.RTYUtils.isUndefinedOrNull(productIdentifier) == false, "productIdentifier 必须赋值");
+                //产品必须已经注册过
+                var isExists = t$.data.productInfoMap.hasOwnProperty(productIdentifier);
+                console.assert(isExists == true, "指定的productIdentifier 必须已经注册，通过EnableIAP注册接口");
+
+                if (!isExists){
+                    var msg = "Product [" + productIdentifier + "] is not registered... please see 'EnableIAP' function";
+                    alert(msg);
+                }
+
+                return isExists;
+            },
+
             restore: function() {
+                var t$ = this;
+
                 if (b$.pN) {
                     //发送购买请求
                     b$.pN.iap.restoreIAP();
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    var obj = window.localStorage.getItem(b$.IAP_SE_KEY);
+                    if (obj){
+                        b$.IAP_SE_OBJ = JSON.parse(obj);
+                    }
+
+                    var purchasedItemList = []; // 声明原先已经购买的商品列表
+
+                    ///检测所有已经注册的ID
+                    $.each(b$.IAP_SE_Wrapper.productIdentifiers, function (index, productID) {
+                        if (b$.IAP_SE_OBJ.hasOwnProperty(productID)){
+
+                            var quantity = b$.IAP_SE_OBJ[productID];
+                            if (quantity > 0){
+                                var purchasedItem = {
+                                    productIdentifier: productID,
+                                    quantity: quantity
+                                };
+
+                                purchasedItemList.push(purchasedItem);
+                            }
+                        }
+
+                    });
+
+                    ///模拟发送获取产品信息
+                    b$.IAP_SE_Wrapper.caller.fire({
+                        notifyType:t$.MessageType["ProductsPaymentQueueRestoreCompleted"],
+                        info:purchasedItemList
+                    });
                 }
             },
 
             buyProduct: function(parms) {
+                var t$ = this;
+                if (!t$._check(parms.productIdentifier)) return;
+
                 if (b$.pN) {
                     //发送购买请求
                     b$.pN.iap.buyProduct($.toJSON({
                         identifier: parms.productIdentifier,
                         quantity: parms.quantity || 1
                     }));
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    var obj = window.localStorage.getItem(b$.IAP_SE_KEY) || JSON.stringify({});
+
+                    b$.IAP_SE_OBJ = JSON.parse(obj);
+                    var orgQuantity = 0, saveQuantity = 0;
+                    if (b$.IAP_SE_OBJ[parms.productIdentifier]){
+                        orgQuantity = b$.IAP_SE_OBJ[parms.productIdentifier];
+                        saveQuantity = orgQuantity + parms.quantity || 1;
+                    }else{
+                        saveQuantity = parms.quantity || 1;
+                    }
+
+                    b$.IAP_SE_OBJ[parms.productIdentifier] = saveQuantity;
+                    window.localStorage.setItem(b$.IAP_SE_KEY, JSON.stringify(b$.IAP_SE_OBJ));
+
+                    //模拟发送成功购买信息
+                    b$.IAP_SE_Wrapper.caller.fire({
+                        notifyType:t$.MessageType["ProductPurchased"],
+                        info:{
+                            productIdentifier: parms.productIdentifier,
+                            quantity: saveQuantity
+                        }
+                    });
+
+                    //模拟发送购买完成信息
+                    b$.IAP_SE_Wrapper.caller.fire({
+                        notifyType:t$.MessageType["ProductCompletePurchased"],
+                        info:{
+                            productIdentifier: parms.productIdentifier,
+                            transactionId: "transactionId" + Math.round(999),
+                            receipt: "receipt" + Math.round(999)
+                        }
+                    });
                 }
             },
 
             getPrice: function(productIdentifier) {
-                if (b$.pN) {
-                    return b$.pN.iap.getPrice(productIdentifier);
-                }
+                var t$ = this;
+                if (!t$._check(productIdentifier)) return;
 
-                return "";
+                if (b$.pN) {
+                    if (b$.App.getSandboxEnable()){
+                        return b$.pN.iap.getPrice(productIdentifier);
+                    }else{
+                        return t$.data.getPrice(productIdentifier);
+                    }
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    return t$.data.getPrice(productIdentifier);
+                }
             },
 
             getUseableProductCount: function(productIdentifier) {
-                if (b$.pN) {
-                    return b$.pN.iap.getUseableProductCount(productIdentifier);
-                }
+                var t$ = this;
+                if (!t$._check(productIdentifier)) return;
 
-                return 0;
+                if (b$.pN) {
+                    return b$.pN.iap.getUseableProductCount(productIdentifier) || 0;
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    var quantity = 0;
+
+                    var obj = window.localStorage.getItem(b$.IAP_SE_KEY) || JSON.stringify({});
+                    if (obj){
+                        b$.IAP_SE_OBJ = JSON.parse(obj);
+                        quantity = b$.IAP_SE_OBJ[productIdentifier] || 0;
+                    }
+
+                    return quantity;
+                }
             },
 
             setUseableProductCount: function(jsonObj) {
+                var t$ = this;
+                if (!t$._check(jsonObj.productIdentifier)) return;
+
+
                 if (b$.pN) {
                     var params = {
                         identifier: jsonObj.productIdentifier || '',
                         quantity: jsonObj.quantity || 1
                     };
-                    return b$.pN.iap.setUseableProductCount($.toJSON(params));
+                    return b$.pN.iap.setUseableProductCount($.toJSON(params)) || 0;
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    var obj = window.localStorage.getItem(b$.IAP_SE_KEY)|| JSON.stringify({});
+                    if (obj) {
+                        b$.IAP_SE_OBJ = JSON.parse(obj);
+
+                        var saveQuantity = jsonObj.quantity || 1;
+                        b$.IAP_SE_OBJ[jsonObj.productIdentifier] = saveQuantity;
+                        window.localStorage.setItem(b$.IAP_SE_KEY, JSON.stringify(b$.IAP_SE_OBJ));
+                        return saveQuantity || 0;
+                    }
                 }
 
                 return 0;
             },
 
             add1Useable: function(productIdentifier) {
+                var t$ = this;
+                if (!t$._check(productIdentifier)) return;
+
                 if (b$.pN) {
-                    return b$.pN.iap.add1Useable(productIdentifier);
+                    return b$.pN.iap.add1Useable(productIdentifier) || 0;
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    var obj = window.localStorage.getItem(b$.IAP_SE_KEY)|| JSON.stringify({});
+                    if (obj){
+                        b$.IAP_SE_OBJ = JSON.parse(obj);
+
+                        var orgQuantity = 0, saveQuantity = 0;
+                        if (b$.IAP_SE_OBJ[productIdentifier]){
+                            orgQuantity = b$.IAP_SE_OBJ[productIdentifier] || 0;
+                            saveQuantity = orgQuantity + 1;
+                        }
+
+                        b$.IAP_SE_OBJ[productIdentifier] = saveQuantity;
+                        window.localStorage.setItem(b$.IAP_SE_KEY, JSON.stringify(b$.IAP_SE_OBJ));
+
+                        return saveQuantity;
+                    }
                 }
 
                 return 0;
             },
 
             sub1Useable: function(productIdentifier) {
+                var t$ = this;
+                if (!t$._check(productIdentifier)) return;
+
                 if (b$.pN) {
-                    return b$.pN.iap.sub1Useable(productIdentifier);
+                    return b$.pN.iap.sub1Useable(productIdentifier) || 0;
+                }else{
+                    console.log("Romanysoft SDK simulation environment....");
+                    var obj = window.localStorage.getItem(b$.IAP_SE_KEY)|| JSON.stringify({});
+                    if (obj){
+                        b$.IAP_SE_OBJ = JSON.parse(obj);
+
+                        var orgQuantity = 0, saveQuantity = 0;
+                        if (b$.IAP_SE_OBJ[productIdentifier]){
+                            orgQuantity = b$.IAP_SE_OBJ[productIdentifier];
+                            saveQuantity = orgQuantity - 1;
+                        }
+
+                        saveQuantity = saveQuantity > 0 ? saveQuantity : 0;
+                        b$.IAP_SE_OBJ[productIdentifier] = saveQuantity;
+                        window.localStorage.setItem(b$.IAP_SE_KEY, JSON.stringify(b$.IAP_SE_OBJ));
+
+                        return saveQuantity;
+                    }
                 }
 
                 return 0;
+            },
+
+            /// {测试}
+            TEST: {
+                //弹出购买窗体
+                showBuyDialog:function (productIdentifier) {
+                    // 核查是否已经获取商品的请求核实数据
+                    if (!(b$.IAP.data.isRegistered)){
+                        var msg = "必须先调用 BS.b$.IAP.getEnable(),并且是可用状态 \n";
+                        msg += "然后调用 BS.b$.IAP.enableIAP() 函数进行初始化";
+
+                        alert(msg);
+                        return;
+                    }
+
+                    // 弹出购买窗体
+                    var allProductsPrice = '$9.99';
+                    var curProductPrice =  b$.IAP.data.getPrice(productIdentifier) || '$0.99';
+                    var message = {
+                        title:"Unlock [" + productIdentifier + "] product",
+                        message:"Only " + curProductPrice + " ,Do you want to unlock it. \nAlso all products only " + allProductsPrice + " you can buy all at times.",
+                        buttons:["Buy","Cancel","Buy All"],
+                        alertType:"Alert"
+                    };
+
+                    var result = b$.Notice.alert(message);
+                    if(result == 0){      //购买单个
+                        b$.IAP.buyProduct(productIdentifier);
+                    }else if(result > 1){ //购买全部
+                        alert("编写购买所有商品的处理方式，可以声明一个商品ID为所有商品的购买ID");
+                    }
+                }
             }
         };
 
@@ -257,6 +685,13 @@
                         buttons: jsonObj.buttons || ['Ok'],
                         alertType: jsonObj.alertType || 'Alert'
                     };
+
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            params[key] = jsonObj[key];
+                        }
+                    }
 
                     var returnValue = b$.pN.notice.alert($.toJSON(params));
 
@@ -294,6 +729,13 @@
                         }, true)
                     };
 
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            params[key] = jsonObj[key];
+                        }
+                    }
+
                     return b$.pN.notice.notify($.toJSON(params));
                 } else {
                     alert(jsonObj.message);
@@ -309,6 +751,13 @@
                             cb && cb(obj);
                         }, true)
                     };
+
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            params[key] = jsonObj[key];
+                        }
+                    }
 
                     if (b$.pIsUseElectron) {
                         if (window.Notification) {
@@ -463,6 +912,13 @@
                 }
             },
 
+            /// 重启启动，先退出，然后重新启动
+            relaunch: function() {
+                if (b$.pN) {
+                    b$.pN.app.relaunch();
+                }
+            },
+
             /// 激活自己
             activate: function() {
                 if (b$.pN) {
@@ -529,15 +985,22 @@
             },
 
             /// 发送电子邮件
-            sendEmail: function(parms) {
+            sendEmail: function(jsonObj) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['sendAddress'] = parms['sendAddress'] || "admin@gmail.com";
-                        parms['toAddress'] = parms['toAddress'] || "admin@gmail.com";
-                        parms['subject'] = parms['subject'] || "Hello";
-                        parms['body'] = parms['body'] || "Hello!!";
+                        parms['sendAddress'] = jsonObj['sendAddress'] || "admin@gmail.com";
+                        parms['toAddress'] = jsonObj['toAddress'] || "admin@gmail.com";
+                        parms['subject'] = jsonObj['subject'] || "Hello";
+                        parms['body'] = jsonObj['body'] || "Hello!!";
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
 
                         b$.pN.app.sendEmailWithMail($.toJSON(parms));
@@ -576,6 +1039,14 @@
                         key: '',
                         value: ''
                     };
+
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            obj[key] = jsonObj[key];
+                        }
+                    }
+
                     b$.pN.window.setInfoToUserDefaults($.toJSON(obj));
                 }
             },
@@ -586,6 +1057,14 @@
                         callback: 'console.log',
                         key: ''
                     };
+
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            obj[key] = jsonObj[key];
+                        }
+                    }
+
                     b$.pN.window.getInfoFromUserDefaults($.toJSON(obj));
                 }
             },
@@ -596,6 +1075,14 @@
                         callback: 'console.log',
                         key: ''
                     };
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            obj[key] = jsonObj[key];
+                        }
+                    }
+
+
                     b$.pN.window.removeItemFromUserDefaults($.toJSON(obj));
                 }
             },
@@ -611,7 +1098,7 @@
 
             ///{获取开通的服务器端口}
             getServerPort: function() {
-                var default_port = 9888;
+                var default_port = 8888;
                 if (b$.pN) {
                     return b$.pN.app.getHttpServerPort() || default_port;
                 }
@@ -739,6 +1226,22 @@
                 return "";
             },
 
+            /// 获得本地desktop目录路径
+            getLocalDesktopDir:function() {
+                if (b$.pN) {
+                    return b$.pN.path.localDesktopDir();
+                }
+                return "";
+            },
+
+            /// 获得本地Library目录路径
+            getLocalLibraryDir:function() {
+                if (b$.pN) {
+                    return b$.pN.path.localLibraryDir();
+                }
+                return "";
+            },
+
             /// 获得Movies目录路径
             getMoviesDir: function() {
                 if (b$.pN) {
@@ -771,6 +1274,15 @@
                 return "";
             },
 
+
+            /// 获得Pictures目录
+            getPicturesDir: function() {
+                if (b$.pN) {
+                    return b$.pN.path.picturesDir();
+                }
+                return "";
+            },
+
             /// 获得本地Pictures目录
             getLocalPicturesDir: function() {
                 if (b$.pN) {
@@ -794,6 +1306,44 @@
                 }
                 return "";
             },
+
+
+            /// 获得沙盒状态下可写入的Documents路径
+            getWritableDocumentsDir: function() {
+                if (b$.pN) {
+                    return b$.pN.path.appWriteableDocumentDir();
+                }
+                return "";
+            },
+            /// 获得沙盒状态下可写入的Download路径
+            getWritableDownloadDir: function() {
+                if (b$.pN) {
+                    return b$.pN.path.appWriteableDownloadDir();
+                }
+                return "";
+            },
+            /// 获得沙盒状态下可写入的Music路径
+            getWritableMusicDir: function() {
+                if (b$.pN) {
+                    return b$.pN.path.appWriteableMusicDir();
+                }
+                return "";
+            },
+            /// 获得沙盒状态下可写入的Movies路径
+            getWritableMoviesDir: function() {
+                if (b$.pN) {
+                    return b$.pN.path.appWriteableMoviesDir();
+                }
+                return "";
+            },
+            /// 获得沙盒状态下可写入的Pictures路径
+            getWritablePicturesDir: function() {
+                if (b$.pN) {
+                    return b$.pN.path.appWriteablePicturesDir();
+                }
+                return "";
+            },
+
 
 
             /// 检测路径是否存在
@@ -833,11 +1383,14 @@
             },
 
             ///创建空文件
-            createEmptyFile: b$.createEmptyFile = function(file_path) {
+            createEmptyFile: b$.createEmptyFile = function(file_path, cb) {
                 if (b$.pN) {
                     var _path = file_path || (b$.pN.path.tempDir() + "tmp.txt");
                     return b$.pN.window.createEmptyFile($.toJSON({
-                        path: _path
+                        path: _path,
+                        callback: b$._get_callback(function(obj) {
+                            cb && cb(obj);
+                        }, true)
                     }));
                 }
             },
@@ -862,11 +1415,14 @@
             },
 
             ///删除文件
-            removeFile: b$.removeFile = function(file_path) {
+            removeFile: b$.removeFile = function(file_path, cb) {
                 if (b$.pN) {
                     var _path = file_path || (b$.pN.path.tempDir() + "tmp.txt");
                     return b$.pN.window.removeFile($.toJSON({
-                        path: _path
+                        path: _path,
+                        callback: b$._get_callback(function(obj) {
+                            cb && cb(obj);
+                        }, true)
                     }));
                 }
             },
@@ -891,16 +1447,23 @@
             },
 
             ///拷贝文件
-            copyFile: b$.copyFile = function(parms, cb) {
+            copyFile: b$.copyFile = function(jsonObj, cb) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['callback'] = parms['callback'] || b$._get_callback(function(obj) {
+                        parms['callback'] = jsonObj['callback'] || b$._get_callback(function(obj) {
                             cb && cb(obj);
                         }, true);
-                        parms['src'] = parms['src'] || "";
-                        parms['dest'] = parms['dest'] || "";
+                        parms['src'] = jsonObj['src'] || "";
+                        parms['dest'] = jsonObj['dest'] || "";
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.copyFile($.toJSON(parms));
                     } catch (e) {
@@ -910,16 +1473,23 @@
             },
 
             ///拷贝目录
-            copyDir: b$.copyDir = function(parms, cb) {
+            copyDir: b$.copyDir = function(jsonObj, cb) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['callback'] = parms['callback'] || b$._get_callback(function(obj) {
+                        parms['callback'] = jsonObj['callback'] || b$._get_callback(function(obj) {
                             cb && cb(obj);
                         }, true);
-                        parms['src'] = parms['src'] || "";
-                        parms['dest'] = parms['dest'] || "";
+                        parms['src'] = jsonObj['src'] || "";
+                        parms['dest'] = jsonObj['dest'] || "";
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.copyDir($.toJSON(parms));
                     } catch (e) {
@@ -929,16 +1499,23 @@
             },
 
             ///移动文件
-            moveFile: b$.moveFile = function(parms, cb) {
+            moveFile: b$.moveFile = function(jsonObj, cb) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['callback'] = parms['callback'] || b$._get_callback(function(obj) {
+                        parms['callback'] = jsonObj['callback'] || b$._get_callback(function(obj) {
                             cb && cb(obj);
                         }, true);
-                        parms['src'] = parms['src'] || "";
-                        parms['dest'] = parms['dest'] || "";
+                        parms['src'] = jsonObj['src'] || "";
+                        parms['dest'] = jsonObj['dest'] || "";
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.moveFile($.toJSON(parms));
                     } catch (e) {
@@ -948,16 +1525,23 @@
             },
 
             ///移动目录
-            moveDir: b$.moveDir = function(parms, cb) {
+            moveDir: b$.moveDir = function(jsonObj, cb) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['callback'] = parms['callback'] || b$._get_callback(function(obj) {
+                        parms['callback'] = jsonObj['callback'] || b$._get_callback(function(obj) {
                             cb && cb(obj);
                         }, true);
-                        parms['src'] = parms['src'] || "";
-                        parms['dest'] = parms['dest'] || "";
+                        parms['src'] = jsonObj['src'] || "";
+                        parms['dest'] = jsonObj['dest'] || "";
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.moveDir($.toJSON(parms));
                     } catch (e) {
@@ -1116,6 +1700,58 @@
 
 
                         return b$.pN.window.getOtherAppInfo($.toJSON(parms));
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                return "";
+            },
+
+            /**
+             * 获取格式化后的字符串。主要是用动态变量来处理
+             * 支持如下变量：
+             * ${HOME}
+             * ${BUNDLE}
+             * ${BUNDEL_RESOURCE}
+             * ${BUNDEL_PLUGIN}
+             * ${DOCUMENTS}
+             * ${LIBRARY}
+             * ${TEMP}
+             * ${CACHE}
+             * ${APPLICATION}
+             * ${DESKTOP}
+             * ${DOWNLOAD}
+             * ${MOVIES}
+             * ${MUSIC}
+             * ${PICTURES}
+             * ${APPW_DOCUMENTS}
+             * ${APPW_DOWNLOAD}
+             * ${APPW_MOVIES}
+             * ${APPW_MUSIC}
+             * ${APPW_PICTURES}
+             * ${LOCAL_DESKTOP}
+             * ${LOCAL_DOWNLOAD}
+             * ${LOCAL_MOVIES}
+             * ${LOCAL_MUSIC}
+             * ${LOCAL_PICTURES}
+             * ${LOCAL_LIBRARY}
+             * ${LOCAL_DOCUMENTS}
+             * ${USER_NAME}
+             * ${USER_FULL_NAME}
+             * ${APPDATA_HOME}
+             * ${APP_UI_DIR}
+             * ${APP_NAME}
+             * ${APP_VERSION}
+             * ${APP_BUILD_VERSION}
+             * ${APP_ID}
+             * @param str
+             * @returns {*}
+             */
+            getUpdateEnvString: function (str) {
+                if (b$.pN) {
+                    try {
+                        return b$.pN.path.getUpdateEnvString(str);
                     } catch (e) {
                         console.error(e);
                     }
@@ -1439,7 +2075,7 @@
                 if (getType === 'Native2Webkit') { // 先获取Native的语言，然后查找Map
                     var apple_lng = 'en-US';
                     if (b$.pN) {
-                        apple_lng = b$.pN.app.getAppleLanguage();
+                        apple_lng = b$.pN.app.curAppleLanguage();
                     }
 
                     if (NativeApple2WebKit_LanguageMap.hasOwnProperty(apple_lng)) {
@@ -1482,7 +2118,7 @@
             ///设置用户的语言
             setUserLanguage: function(language) {
                 if (b$.pN) {
-                    b$.pN.app.setUserLanguage(language || 'en-US');
+                    return b$.pN.app.setUserLanguage(language || 'en-US');
                 }
             },
 
@@ -1507,7 +2143,12 @@
                         parms['filePath'] = parms['filePath'] || (b$.pN.path.tempDir() +
                             "cap_screen.png"); // 保存文件
 
-
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
                         b$.pN.window.capture($.toJSON(parms));
                     } catch (e) {
                         console.error(e);
@@ -1532,6 +2173,13 @@
                             cb && cb(obj);
                         }, true);
                         parms['path'] = parms['path'] || (b$.pN.path.tempDir());
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.createDirChangeWatcher($.toJSON(parms));
                     } catch (e) {
@@ -1558,6 +2206,13 @@
                         }, true);
                         parms['path'] = parms['path'] || (b$.pN.path.tempDir());
 
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
+
                         b$.pN.window.createFileChangeWatcher($.toJSON(parms));
                     } catch (e) {
                         console.error(e);
@@ -1571,6 +2226,13 @@
                     try {
                         var parms = jsonObj || {};
                         parms['path'] = parms['path'] || (b$.pN.path.tempDir());
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         return b$.pN.window.removeFromChangeWatcher($.toJSON(parms));
                     } catch (e) {
@@ -1589,6 +2251,13 @@
                         var parms = jsonObj || {};
                         parms['silent'] = parms['silent'] || false;
                         parms['printBackground'] = parms['printBackground'] || false;
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         return b$.pN.window.print($.toJSON(parms));
                     } catch (e) {
@@ -1614,6 +2283,13 @@
                         parms['landscape'] = parms['landscape'] || false;
                         parms['filePath'] = parms['filePath'] || (b$.pN.path.tempDir() + "/" + Date
                             .now() + ".pdf");
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         return b$.pN.window.printToPDF($.toJSON(parms));
                     } catch (e) {
@@ -1642,6 +2318,13 @@
                             key: jsonObj.xpc_key || "default",
                             id: jsonObj.bundleID || "com.romanysoft.app.mac.xpc.AgentHelper"
                         };
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                params[key] = jsonObj[key];
+                            }
+                        }
 
                         return b$.pN.app.registerNewXPCService($.toJSON(params));
                     } catch (e) {
@@ -1751,6 +2434,13 @@
                             messageDic: _json.messageDic
                         };
 
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                params[key] = jsonObj[key];
+                            }
+                        }
+
                         return b$.pN.app.sendMessageToXPCService($.toJSON(params));
                     } catch (e) {
                         console.error(e)
@@ -1813,6 +2503,13 @@
                     var node_path = pluginDir + "/node";
 
                     var _json = jsonObj || {};
+
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            _json[key] = jsonObj[key];
+                        }
+                    }
 
                     // 创建任务
                     var messageDic = {
@@ -2045,13 +2742,20 @@
             },
 
             // 移动窗体
-            move: function(parms) {
+            move: function(jsonObj) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['x'] = parms['x'] || 0.0;
-                        parms['y'] = parms['y'] || 0.0;
+                        parms['x'] = jsonObj['x'] || 0.0;
+                        parms['y'] = jsonObj['y'] || 0.0;
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.move($.toJSON(parms));
                     } catch (e) {
@@ -2063,13 +2767,20 @@
             },
 
             // 改变窗体大小
-            resize: function(parms) {
+            resize: function(jsonObj) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['width'] = parms['width'] || 600;
-                        parms['height'] = parms['height'] || 400;
+                        parms['width'] = jsonObj['width'] || 600;
+                        parms['height'] = jsonObj['height'] || 400;
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.resize($.toJSON(parms));
                     } catch (e) {
@@ -2092,13 +2803,20 @@
             },
 
             // 设置窗体尺寸最小值
-            setMinSize: function(parms) {
+            setMinSize: function(jsonObj) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['width'] = parms['width'] || 600;
-                        parms['height'] = parms['height'] || 400;
+                        parms['width'] = jsonObj['width'] || 600;
+                        parms['height'] = jsonObj['height'] || 400;
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.setMinsize($.toJSON(parms));
                     } catch (e) {
@@ -2121,13 +2839,20 @@
             },
 
             // 设置窗体最大值
-            setMaxSize: function(parms) {
+            setMaxSize: function(jsonObj) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = jsonObj || {};
                         //限制内部属性：
-                        parms['width'] = parms['width'] || 600;
-                        parms['height'] = parms['height'] || 400;
+                        parms['width'] = jsonObj['width'] || 600;
+                        parms['height'] = jsonObj['height'] || 400;
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
 
                         b$.pN.window.setMaxsize($.toJSON(parms));
                     } catch (e) {
@@ -2151,8 +2876,28 @@
             },
 
             // 设置窗体当前尺寸
-            setSize: function(parms) {
-                b$.Window.resize(parms);
+            setSize: function(jsonObj) {
+                if (b$.pN) {
+                    try {
+                        var parms = jsonObj || {};
+                        //限制内部属性：
+                        parms['width'] = jsonObj['width'] || 600;
+                        parms['height'] = jsonObj['height'] || 400;
+
+                        /// 统一向后兼容处理
+                        for(var key in jsonObj){
+                            if (jsonObj.hasOwnProperty(key)){
+                                parms[key] = jsonObj[key];
+                            }
+                        }
+
+                        b$.Window.resize(parms);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                } else {
+                    alert('启动窗体设置最大尺寸!')
+                }
             }
 
         };
@@ -2180,6 +2925,13 @@
                         actionCB && actionCB(obj);
                     }, true);
 
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
+
 
                     if (b$.pN) {
                         b$.pN.window.setMenuProperty($.toJSON(parms));
@@ -2198,13 +2950,20 @@
 
                 return 0;
             },
-            addRecentDocument: function(parms) {
+            addRecentDocument: function(in_parms) {
                 if (b$.pN) {
                     try {
-                        parms = parms || {};
+                        var parms = in_parms || {};
                         //限制内部属性：
-                        parms['url'] = parms['url'] || "";
-                        parms['mustWritable'] = parms['mustWritable'] || false;
+                        parms['url'] = in_parms['url'] || "";
+                        parms['mustWritable'] = in_parms['mustWritable'] || false;
+
+                        /// 统一向后兼容处理
+                        for(var key in in_parms){
+                            if (in_parms.hasOwnProperty(key)){
+                                parms[key] = in_parms[key];
+                            }
+                        }
 
                         b$.pN.window.addRecentDocument($.toJSON(parms));
                     } catch (e) {
@@ -2277,6 +3036,13 @@
                     parms['offset'] = in_parms['offset'] || 0;
                     parms['dataAppend'] = in_parms['dataAppend'] || false;
 
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
+
                     if (b$.pN) {
                         b$.pN.binaryFileWriter.writeBinaryArray($.toJSON(parms));
                     } else {
@@ -2301,6 +3067,13 @@
                     parms['text'] = in_parms['text'] || "";
                     parms['offset'] = in_parms['offset'] || 0;
                     parms['dataAppend'] = in_parms['dataAppend'] || false;
+
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
 
                     if (b$.pN) {
                         b$.pN.binaryFileWriter.writeTextToFile($.toJSON(parms));
@@ -2339,10 +3112,18 @@
                      UTF16,UTF16BigEndian,UTF16LittleEndian
                      **/
 
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
+
                     if (b$.pN) {
                         return b$.pN.binaryFileWriter.getTextFromFile($.toJSON(parms)); //使用非异步模式(async == false)，直接返回content内容
                     } else {
-                        alert('获取文本文件中的内容（UTF8编码）')
+                        alert('获取文本文件中的内容（UTF8编码）');
+                        cb && cb({success:true, text:""});
                     }
 
                 } catch (e) {
@@ -2363,6 +3144,13 @@
                     parms['filePath'] = in_parms['filePath'] || "";
                     parms['base64String'] = in_parms['base64String'] || "";
                     parms['dataAppend'] = in_parms['dataAppend'] || false;
+
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
 
 
                     if (b$.pN) {
@@ -2390,6 +3178,13 @@
                     parms['imageType'] = in_parms['imageType'] || 'jpeg'; //png,bmp
 
 
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
+
                     if (b$.pN) {
                         b$.pN.binaryFileWriter.base64ToImageFile($.toJSON(parms));
                     } else {
@@ -2415,6 +3210,12 @@
                     parms['orgFilePath'] = in_parms['orgFilePath'] || ""; // 源文件
                     parms['imageType'] = in_parms['imageType'] || 'jpeg'; //png,bmp
 
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
 
                     if (b$.pN) {
                         b$.pN.binaryFileWriter.imageFileConvertToOthers($.toJSON(parms));
@@ -2493,6 +3294,13 @@
                     parms["enableDir"] = jsonObj["enableDir"] || false;
                     parms["enableFile"] = jsonObj["enableFile"] || true;
                     parms["fileTypes"] = jsonObj["fileTypes"] || ["*"]; // ["*","mp3","md", "xls"] 类似这样的格式
+
+                    /// 统一向后兼容处理
+                    for(var key in jsonObj){
+                        if (jsonObj.hasOwnProperty(key)){
+                            parms[key] = jsonObj[key];
+                        }
+                    }
 
                     if (t$.pIsUseElectron) {
                         $(document).ready(function(){
@@ -2708,6 +3516,13 @@
                 parms["label"] = in_parms["label"] || "File Format:";
                 //[end]下拉文件类型选择处理
 
+                /// 统一向后兼容处理
+                for(var key in in_parms){
+                    if (in_parms.hasOwnProperty(key)){
+                        parms[key] = in_parms[key];
+                    }
+                }
+
                 if (b$.pN) {
                     b$.pN.window.openFile($.toJSON(parms));
                 } else {
@@ -2767,6 +3582,14 @@
                 parms['directory'] = in_parms['directory'] || ""; // 默认指定的目录
                 parms['types'] = [];
 
+
+                /// 统一向后兼容处理
+                for(var key in in_parms){
+                    if (in_parms.hasOwnProperty(key)){
+                        parms[key] = in_parms[key];
+                    }
+                }
+
                 if (b$.pN) {
                     b$.pN.window.openFile($.toJSON(parms));
                 } else {
@@ -2822,6 +3645,20 @@
                     parms['directory'] = in_parms['directory'] || ""; // 默认指定的目录
                     parms['types'] = in_parms['types'] || ['*']; // 要求的数组
 
+                    //下拉文件类型选择处理
+                    parms["enableFileFormatCombox"] = in_parms["enableFileFormatCombox"] || false;
+                    parms["typesDescript"] = in_parms["typesDescript"] || [];
+                    parms["lable"] = in_parms["lable"] || "File Format:";
+                    parms["label"] = in_parms["label"] || "File Format:";
+                    //[end]下拉文件类型选择处理
+
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
+
                     b$.pN.window.saveFile($.toJSON(parms));
                 } catch (e) {
                     console.error(e);
@@ -2854,15 +3691,22 @@
         };
 
         // 预览文件
-        b$.previewFile = function(parms, cb) {
+        b$.previewFile = function(in_parms, cb) {
             if (b$.pN) {
                 try {
-                    parms = parms || {};
+                    var parms = in_parms || {};
                     //限制内部属性：
-                    parms['callback'] = parms['callback'] || b$._get_callback(function(obj) {
+                    parms['callback'] = in_parms['callback'] || b$._get_callback(function(obj) {
                         cb && cb(obj);
                     }, true);
-                    parms['filePath'] = parms['filePath'] || "";
+                    parms['filePath'] = in_parms['filePath'] || "";
+
+                    /// 统一向后兼容处理
+                    for(var key in in_parms){
+                        if (in_parms.hasOwnProperty(key)){
+                            parms[key] = in_parms[key];
+                        }
+                    }
 
                     b$.pN.window.preveiwFile($.toJSON(parms));
                 } catch (e) {

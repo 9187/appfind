@@ -363,7 +363,7 @@
     };
 
 /// start find app
-    $.blockUI.defaults.message = 'Loading...';
+    $.blockUI.defaults.message = 'Finding...';
     c$.loadingUI = function(){
         debugger;
         $.blockUI({ css: {
@@ -403,17 +403,6 @@
                 cb && cb();
             }
         }else{
-            var msg = "Starting the test engine service, please wait...";
-            //
-            // // 告知服务器
-            $.reportErrorInfo(msg);
-            //
-            // // 通知客户
-            // b$.Notice.alert({
-            //     title: "Information",
-            //     message:msg
-            // });
-
             /// 一定时间间隔内，尝试启动
             setTimeout(function(){
                 // 尝试重新启动
@@ -444,17 +433,6 @@
                 cb && cb();
             }
         }else{
-            var msg = "Starting the test engine service, please wait...";
-            //
-            // // 告知服务器
-            $.reportErrorInfo(msg);
-            //
-            // // 通知客户
-            // b$.Notice.alert({
-            //     title: "Information",
-            //     message:msg
-            // });
-
             /// 一定时间间隔内，尝试启动
             setTimeout(function(){
                 // 尝试重新启动
@@ -484,12 +462,6 @@
                 cb && cb();
             }
         }else{
-            var msg = "Starting the test engine service, please wait...";
-            //
-            // // 告知服务器
-            $.reportErrorInfo(msg);
-
-            /// 一定时间间隔内，尝试启动
 
         }
     };
@@ -504,10 +476,12 @@
 
             /// 调用核心方法
             var findSubFolder = $('.recursion-sub-folder:checked').length;
-            if(findSubFolder){
-                c$.unlockLoadingUI();
-                c$.loadingUI();
-            }
+            if(findSubFolder){}
+			
+			c$.unlockLoadingUI();
+            c$.loadingUI();
+			
+			
             c$.pythonAddon.common_service(c$._p_findApp_server_moudel,
                 {'method':'find_app_form_folder',
                     'parameters':{
@@ -523,17 +497,6 @@
             }
         }else{
             c$.unlockLoadingUI();
-            var msg = "Starting the test engine service, please wait...";
-
-            // 告知服务器
-            $.reportErrorInfo(msg);
-
-            // 通知客户
-            b$.Notice.alert({
-                title: "Information",
-                message:msg
-            });
-
             /// 一定时间间隔内，尝试启动
             setTimeout(function(){
                 // 尝试重新启动
@@ -562,17 +525,14 @@
                 cb && cb();
             }
         }else{
-            var msg = "Starting the test engine service, please wait...";
-            //
-            // // 告知服务器
-            $.reportErrorInfo(msg);
 
             /// 一定时间间隔内，尝试启动
             setTimeout(function(){
                 // 尝试重新启动
-                c$.python.startPyWebServer();
-                // c$.loadSelectFolder({folder_path: e.folder_path});
-            }, 1000);
+				if(!c$.python.isPyWSisRunning){
+					c$.python.startPyWebServer();
+				}
+            }, 2000);
 
         }
     };
