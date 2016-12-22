@@ -9,7 +9,7 @@ body{
   overflow: hidden;
   margin: 0;
   min-width: 400px;
-  font-family: "Lucida Grande","Lucida Sans Unicode","STHeitiSC-Light","Helvetica","Arial","Verdana","sans-serif";
+  font-family: "Arial","Lucida Grande","Lucida Sans Unicode","STHeitiSC-Light","Helvetica","Verdana","sans-serif";
 }
 
 .folder-info-unit{
@@ -122,9 +122,9 @@ body{
 }
 
 .result-container{
-  background-image: url('../images/logo.png');
-  -webkit-background-size: cover;
-  background-size: cover;
+  /*background-image: url('../images/logo.png');*/
+  /*-webkit-background-size: cover;*/
+  /*background-size: cover;*/
   /*background-color: #f9f9f9;*/
 }
 
